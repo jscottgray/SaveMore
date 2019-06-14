@@ -1,5 +1,3 @@
-snacks : https://shop.saveonfoods.com/store/AF1F1129#/category/589/snacks
-soup and canned goods : https://shop.saveonfoods.com/store/AF1F1129#/category/576/soup%20%26%20canned%20goods
 world cuisine : https://shop.saveonfoods.com/store/AF1F1129#/category/583/world%20cuisine
 health, beauty and wellness : https://shop.saveonfoods.com/store/AF1F1129#/category/571/health%2C%20beauty%20%26%20wellness
 baby and child care : https://shop.saveonfoods.com/store/AF1F1129#/category/572/baby%20%26%20child%20care
@@ -18,3 +16,5 @@ dairy : https://shop.saveonfoods.com/store/AF1F1129#/category/579/dairy
 frozen : https://shop.saveonfoods.com/store/AF1F1129#/category/581/frozen
 meat alternatives : https://shop.saveonfoods.com/store/AF1F1129#/category/30219/meat%20alternatives
 pasta, sauces, grains : https://shop.saveonfoods.com/store/AF1F1129#/category/586/pasta%2C%20sauces%2C%20grains
+snacks : https://shop.saveonfoods.com/store/AF1F1129#/category/589/snacks
+soup and canned goods : https://shop.saveonfoods.com/store/AF1F1129#/category/576/soup%20%26%20canned%20goods

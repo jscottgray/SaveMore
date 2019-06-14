@@ -1,6 +1,7 @@
 import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
@@ -9,6 +10,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import ElementNotInteractableException
 from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
 import pickle
 import os
 import logging
@@ -111,7 +113,11 @@ def scrape(driver, product_list):
                     logging.debug(f"{product_name} {product_size} was not found")
                     main_url = driver.current_url  # save the page url to reverse traversal
                     try:
+                        # TODO: open item in new tab to save the reload time when you navigate to the previous page
+                        # ActionChains(driver).key_down(Keys.COMMAND).key_down(Keys.SHIFT).perform()
+                        # products[i].find_element_by_tag_name("h3").send_keys(Keys.COMMAND)
                         products[i].find_element_by_tag_name("h3").click()
+                        # ActionChains(driver).key_up(Keys.COMMAND).key_up(Keys.SHIFT).perform()
                         time.sleep(4)
 
                         # retrieve SKU and description here
