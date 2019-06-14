@@ -21,7 +21,10 @@ def init_driver(headless=True):
     #     options.add_argument("--headless")
     #
     # driver = webdriver.Firefox(options=options)
-    driver = webdriver.Firefox(executable_path=r'/usr/local/bin/gecko_driver/geckodriver')
+
+    # TODO: Check which OS is running. If Mac then geckodriver is in path and don't need to specify
+    # driver = webdriver.Firefox(executable_path=r'/usr/local/bin/gecko_driver/geckodriver')
+    driver = webdriver.Firefox()
     driver.wait = WebDriverWait(driver, 5)
     return driver
 
