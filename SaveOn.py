@@ -15,12 +15,13 @@ import logging
 
 
 def init_driver(headless=True):
-    options = Options()
-    if headless:
-        # make the browser headless
-        options.add_argument("--headless")
-
-    driver = webdriver.Firefox(options=options)
+    # options = Options()
+    # if headless:
+    #     # make the browser headless
+    #     options.add_argument("--headless")
+    #
+    # driver = webdriver.Firefox(options=options)
+    driver = webdriver.Firefox(executable_path=r'/usr/local/bin/gecko_driver/geckodriver')
     driver.wait = WebDriverWait(driver, 5)
     return driver
 
@@ -33,7 +34,7 @@ def check_exists_by_xpath(driver, xpath):
     return True
 
 
-def lookup(driver):
+def lookup():
     # load the department url text file
     F = open("departments.txt", "r")
     department_urls = []
@@ -51,14 +52,18 @@ def lookup(driver):
 
     # scrape each department
     for department in department_urls:
+        driver = init_driver()
+        print(f"Scraping department: {department[0]}")
         logging.debug(f"Scraping department: {department[0]}")
         driver.get(department[1])
         scrape(driver, name_to_SKU)
+        driver.close()
 
     # save the updated name to SKU dictionary to file
     pkl_file = open('SKU.pkl', 'wb')
     pickle.dump(name_to_SKU, pkl_file)
     pkl_file.close()
+
 
 def scrape(driver, product_list):
     time.sleep(8)  # wait before checking if elements exist on the page
@@ -83,7 +88,14 @@ def scrape(driver, product_list):
             products = driver.find_elements_by_class_name("product__itemContent")
             number_of_products = len(products)
             for i in range(number_of_products):
-                product = products[i]
+                try:
+                    product = products[i]
+                except IndexError:
+                    logging.error(f"Index Error occurred on element {i} at: {driver.currenturl}")
+                    print(f"Index Error occurred on element {i} at: {driver.currenturl}")
+                    time.sleep(10)
+                    products = driver.find_elements_by_class_name("product__itemContent")
+                    product = products[i]
                 product_name = product.find_element_by_tag_name("h3").get_attribute("innerText")
                 product_size = product.find_element_by_class_name("productInfo__size").get_attribute("innerText")
                 product_price = product.find_element_by_class_name("priceInfo").get_attribute("innerText")
@@ -124,7 +136,7 @@ def scrape(driver, product_list):
                         time.sleep(6)
                         products = driver.find_elements_by_class_name("product__itemContent")
         except NoSuchElementException:
-            logging.error(f"No Such Element Exception occured at: {driver.current_url}")
+            logging.error(f"No Such Element Exception occurred at: {driver.current_url}")
         # hit the next button
         try:
             button = driver.find_element_by_xpath('/html/body/div[1]/div/div[1]/div[1]/div/div[2]/div[1]/nav/button[2]')
@@ -140,12 +152,39 @@ def scrape(driver, product_list):
             # for categories which do not have more than 1 page - hence no navigation
             return
 
+
 if __name__ == "__main__":
-    logging.basicConfig(filename="test.log", level=logging.DEBUG)  # change to level to DEBUG or ERROR
-    driver = init_driver()
-    lookup(driver)
-    time.sleep(2)
-    driver.quit()
+    logging.basicConfig(filename="test.log", level=logging.WARNING)  # change to level to DEBUG or ERROR
+
+    # load the department url text file
+    F = open("departments.txt", "r")
+    department_urls = []
+    for line in F:
+        department_urls.append(line.rstrip().split(" : "))
+    F.close()
+
+    if os.path.isfile('SKU.pkl'):
+        pkl_file = open('SKU.pkl', 'rb')
+        name_to_SKU = pickle.load(pkl_file)
+        pkl_file.close()
+    else:
+        logging.warning("Name to SKU File not found. Should be named SKU.pkl")
+        name_to_SKU = dict()
+
+    # scrape each department
+    for department in department_urls:
+        driver = init_driver()
+        print(f"Scraping department: {department[0]}")
+        logging.debug(f"Scraping department: {department[0]}")
+        driver.get(department[1])
+        scrape(driver, name_to_SKU)
+        driver.close()
+
+    # save the updated name to SKU dictionary to file
+    pkl_file = open('SKU.pkl', 'wb')
+    pickle.dump(name_to_SKU, pkl_file)
+    pkl_file.close()
+
     logging.debug("Process Finished")
 
 # TODO: better error handling that continues scraping and displays the error and the page it occurred on
