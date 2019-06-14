@@ -120,6 +120,7 @@ def scrape(driver, product_list):
                                 product_SKU = line.replace("SKU ", "")
                                 product_list[SKU_lookup] = product_SKU
                                 logging.debug(f"SKU: {product_SKU}")
+                                print(f"SKU_lookup: {SKU_lookup} SKU: {product_SKU}")
                     except ElementNotInteractableException:
                         logging.error(f"Element Not Interactable Exception occurred at: {driver.current_url} Element: {i}")
                     except NoSuchElementException:
@@ -146,7 +147,8 @@ def scrape(driver, product_list):
         except ElementNotInteractableException:
             # Exception raised when done scraping a category.
             # The element exists but obviously doesn't appear on the last page
-            logging.error(f"Element Not Interactable Exception occurred at: {driver.current_url}")
+            # logging level is debug not error as this is an expected issue at the end of each category
+            logging.debug(f"Element Not Interactable Exception occurred at: {driver.current_url}")
             return
         except NoSuchElementException:
             # for categories which do not have more than 1 page - hence no navigation
