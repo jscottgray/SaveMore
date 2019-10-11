@@ -15,26 +15,29 @@ import pickle
 import os
 import logging
 import datetime
+import sys
 
 
 today = datetime.date.today()
 output_filename = today.strftime("SaveOnFoods%b%d.txt")
 # line count for number of items scraped last week
 last_week_total = sum(1 for line in open("output.txt"))
-tally_total = sum(1 for line in open(output_filename))
+tally_total = 0
+if os.path.isfile(output_filename):
+    tally_total = sum(1 for line in open(output_filename, "r+"))
 
 
 def init_driver(headless=True):
-    # options = Options()
-    # if headless:
-    #     # make the browser headless
-    #     options.add_argument("--headless")
-    #
-    # driver = webdriver.Firefox(options=options)
+    options = Options()
+    if headless:
+        # make the browser headless
+        options.add_argument("--headless")
+    # todo: throw this into a try except block to make sure geckodriver is installed
+    driver = webdriver.Firefox(options=options)
 
     # TODO: Check which OS is running. If Mac then geckodriver is in path and don't need to specify
     # driver = webdriver.Firefox(executable_path=r'/usr/local/bin/gecko_driver/geckodriver')
-    driver = webdriver.Firefox()
+    # driver = webdriver.Firefox()
     driver.wait = WebDriverWait(driver, 5)
     return driver
 
@@ -144,13 +147,15 @@ def scrape(driver, product_list, completed_categories):
                         quantity = price_list[0]
                         product_price = str(round(float(total_price) / int(quantity), 2))
                         product_multibuy = True
-                    elif "Buy" in product_price and "Get" in product_price and "points" not in product_price:
+                    elif "Buy" in product_price and "Get" in product_price:  # and "points" not in product_price:
                         if "points" not in product_price:
+                            # buy 2 get 1 free
                             price = price_list[0]
                             price = price[1:]
                             price = float(price)
-                            product_price = int(price_list[2]) * price / (int(price_list[2]) + int([price_list[4]]))
+                            product_price = int(price_list[2]) * price / (int(price_list[2]) + int(price_list[4]))
                         else:
+                            # getting free points
                             product_multibuy = price_list[0]
                     elif "On Sale!" in product_price:
                         product_price = price_list[0]
@@ -169,7 +174,8 @@ def scrape(driver, product_list, completed_categories):
                             product_size = "/kg"
                         # need to multiply product_size by avg_price to get price/kg
 
-                    product_price = product_price.strip("$")
+                    if isinstance(product_price, str):
+                        product_price = product_price.strip("$")
 
                     logging.debug(f"Name: {product_name} Size: {product_size} Price: {product_price}")
                     # look up and see if name + size returns a known SKU
@@ -246,6 +252,12 @@ if __name__ == "__main__":
     # update this so it includes the date
     completed_categories_filename = "completed_categories.txt"
 
+    # print(sys.argv)
+    if "-h" in sys.argv or "--headless" in sys.argv:
+        headless = True
+    else:
+        headless = False
+
     # load the ProductName -> SKU conversion list
     if os.path.isfile(SKU_filename):
         pkl_file = open(SKU_filename, 'rb')
@@ -270,7 +282,7 @@ if __name__ == "__main__":
     # scrape each department
     for department in department_URLs:
         if department[0] not in completed_categories:
-            driver = init_driver()
+            driver = init_driver(headless)
             print(f"Scraping department: {department[0]}")
             logging.debug(f"Scraping department: {department[0]}")
             # Scrape the Department
