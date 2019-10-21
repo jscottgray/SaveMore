@@ -1,21 +1,15 @@
-import time
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import ElementNotInteractableException
 from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.common.action_chains import ActionChains
-import pickle
-import os
-import logging
+import time
 import datetime
 import sys
+import os
+import logging
+import pickle
 
 
 today = datetime.date.today()
@@ -33,11 +27,13 @@ def init_driver(headless=True):
         # make the browser headless
         options.add_argument("--headless")
     # todo: throw this into a try except block to make sure geckodriver is installed
-    driver = webdriver.Firefox(options=options)
+    # driver = webdriver.Firefox(executable_path=r'/usr/local/bin/gecko_driver/geckodriver')
+    try:
+        driver = webdriver.Firefox(options=options)
+    except all as e:
+        print(e.msg)
 
     # TODO: Check which OS is running. If Mac then geckodriver is in path and don't need to specify
-    # driver = webdriver.Firefox(executable_path=r'/usr/local/bin/gecko_driver/geckodriver')
-    # driver = webdriver.Firefox()
     driver.wait = WebDriverWait(driver, 5)
     return driver
 
@@ -99,11 +95,10 @@ def scrape(driver, product_list, completed_categories):
             category_name_list.append(category_names[i].get_attribute("innerText"))
         for i in range(categories_size):
             # go through each category on the page
-            # driver.get(categories_url)
-            # time.sleep(6)  # wait for it to load before checking if elements exist
             categories = driver.find_elements_by_xpath("//button[contains(.,'View All')]")
             current_category = category_name_list[i]
             if current_category not in completed_categories:
+
                 try:
                     categories[i].click()
                 except ElementClickInterceptedException as e:
@@ -181,6 +176,11 @@ def scrape(driver, product_list, completed_categories):
                     # look up and see if name + size returns a known SKU
                     # if it doesn't click on the listing and get the SKU
                     SKU_lookup = str(product_name) + "::" + str(product_size)
+                    global tally_total
+                    global last_week_total
+                    tally_total += 1
+                    print_progress(tally_total, last_week_total)
+
                     # check and see if we know the SKU based on Title+Size - if not we need to gather that info
                     if SKU_lookup in product_list:
                         product_SKU = product_list[SKU_lookup]
@@ -243,7 +243,39 @@ def scrape(driver, product_list, completed_categories):
             time.sleep(6)
 
 
+def print_progress(progress, total):
+    width = 50
+    blockwidth = int(total / width)
+    num_blocks = int(progress / blockwidth)
+    string = "["
+    string += str("█" * num_blocks)
+    remainder = int((progress % blockwidth) / blockwidth * 8)
+    if remainder == 0:
+        string += " "
+    elif remainder == 1:
+        string += "▏"
+    elif remainder == 2:
+        string += "▎"
+    elif remainder == 3:
+        string += "▍"
+    elif remainder == 4:
+        string += "▌"
+    elif remainder == 5:
+        string += "▋"
+    elif remainder == 6:
+        string += "▊"
+    elif remainder == 7:
+        string += "▉"
+    elif remainder == 8:
+        string += "█"
+    string += " " * (width - num_blocks - 1)
+    string += "]"
+    print(f"{string} {int(progress / total) * 100}% {progress}/{total}", end="\r")
+
+
 if __name__ == "__main__":
+    print(f"tally total: {tally_total} last week total: {last_week_total}")
+
     # change to level to DEBUG / ERROR / WARNING
     logging.basicConfig(filename="test.log", level=logging.WARNING)
 
@@ -285,6 +317,7 @@ if __name__ == "__main__":
             driver = init_driver(headless)
             print(f"Scraping department: {department[0]}")
             logging.debug(f"Scraping department: {department[0]}")
+            print_progress(tally_total, last_week_total)
             # Scrape the Department
             driver.get(department[1])
             scrape(driver, name_to_SKU, completed_categories)
