@@ -13,9 +13,15 @@ import pickle
 
 
 today = datetime.date.today()
-output_filename = today.strftime("SaveOnFoods%b%d.txt")
+
+todays_date = datetime.date.today()
+todays_week = (todays_date + datetime.timedelta(days=4)).isocalendar()[1]
+todays_year = (todays_date + datetime.timedelta(days=4)).year
+output_filename = f"SaveOnFoods{todays_year}-{todays_week}.txt"
+url_filename = f"SaveOnFoodsURL{todays_year}-{todays_week}.txt"
+# output_filename = today.strftime("SaveOnFoods%b%d.txt")
 # line count for number of items scraped last week
-last_week_total = sum(1 for line in open("output.txt"))
+last_week_total = sum(1 for line in open("SaveOnFoods2019-44.txt"))
 tally_total = 0
 if os.path.isfile(output_filename):
     tally_total = sum(1 for line in open(output_filename, "r+"))
@@ -111,10 +117,13 @@ def scrape(driver, product_list, completed_categories):
                 driver.get(categories_url)
                 with open("completed_categories.txt", "a") as f:
                     f.write(current_category + "\n")
+                    # f.write(f"Current URL:{driver.current_url}")
                 time.sleep(6)
 
     # Option 2: "Next" button appears on page - indicates a page with listings
     else:
+        with open(url_filename, "a") as f:
+            f.write(driver.current_url + "\n")
         revert_url = driver.current_url
         try:
             products = driver.find_elements_by_class_name("product__itemContent")
@@ -203,7 +212,8 @@ def scrape(driver, product_list, completed_categories):
                                     product_list[SKU_lookup] = product_SKU
                                     logging.debug(f"{product_SKU} {product_price} {product_multibuy}")
                                     with open(output_filename, "a") as out:
-                                        out.write(f"{product_SKU} {product_price} {product_multibuy}\n")
+                                        # save to file as comma separated list for easier parsing later
+                                        out.write(f"{product_SKU},{product_price},{str(product_multibuy).replace('m,','')}\n")
                         except ElementNotInteractableException:
                             logging.error(f"Element Not Interactable Exception occurred at: {driver.current_url} Element: {i}")
                         except NoSuchElementException:
@@ -270,11 +280,19 @@ def print_progress(progress, total):
         string += "█"
     string += " " * (width - num_blocks - 1)
     string += "]"
-    print(f"{string} {int(progress / total) * 100}% {progress}/{total}", end="\r")
+    print(f"{string} {int(progress * 100 / total)}% {progress}/{total}", end="\r")
 
 
 if __name__ == "__main__":
     print(f"tally total: {tally_total} last week total: {last_week_total}")
+
+    # retrieve todays date and the current week (starting on Thursdays)
+    todays_date = datetime.date.today()
+    todays_week = (todays_date + datetime.timedelta(days=4)).isocalendar()[1]
+    todays_year = (todays_date + datetime.timedelta(days=4)).year
+    print(f"week: {todays_week} year: {todays_year}")
+
+    print(f"Saving data to {output_filename}")
 
     # change to level to DEBUG / ERROR / WARNING
     logging.basicConfig(filename="test.log", level=logging.WARNING)
@@ -326,10 +344,4 @@ if __name__ == "__main__":
                 f.write(department[0] + "\n")
             logging.debug(f"Done scraping department: {department[0]}")
             driver.close()
-
-# TODO: better error handling that continues scraping and displays the error and the page it occurred on
-# TODO: add ability to pass through via CL argument a file containing URLs to scrape
-# TODO: save error URLs to separate file so you can pass it in later
-# TODO: add a progress bar? Based on how many items scraped/time elapsed?
-
-# TODO: decode the product_price
+    print("Finished Scraping")
