@@ -7,8 +7,7 @@ Uses Depth First Traversal to get all items listed. If an item isn't previously 
 Currently under development.
 
 ```bash
-source venv/bin/activate
-echo "" > completed_categories.txt
+pip install -r requirements.txt
 python3 SaveOn.py
 ```
 
