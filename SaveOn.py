@@ -26,6 +26,8 @@ tally_total = 0
 if os.path.isfile(output_filename):
     tally_total = sum(1 for line in open(output_filename, "r+"))
 
+# TODO: need to remove all references to saving the results in a txt file
+
 
 def init_driver(headless=True):
     options = Options()
@@ -83,7 +85,7 @@ def lookup():
     pkl_file.close()
 
 
-def scrape(driver, product_list, completed_categories):
+def scrape(driver, product_list, completed_categories, department, current_category=""):
     time.sleep(8)  # wait before checking if elements exist on the page
     # Given a page - is it a page with categories or a page with products?
     # A category page will have at least one button that says "View All"
@@ -118,7 +120,8 @@ def scrape(driver, product_list, completed_categories):
                     categories = driver.find_elements_by_xpath(
                         "//button[contains(.,'View All')]")
                     categories[i].click()
-                scrape(driver, product_list, completed_categories)
+                scrape(driver, product_list,
+                       completed_categories, department, current_category)
                 driver.get(categories_url)
                 with open("completed_categories.txt", "a") as f:
                     f.write(current_category + "\n")
@@ -209,14 +212,17 @@ def scrape(driver, product_list, completed_categories):
                     print_progress(tally_total, last_week_total)
 
                     # check and see if we know the SKU based on Title+Size - if not we need to gather that info
-                    if SKU_lookup in product_list:
-                        product_SKU = product_list[SKU_lookup]
+                    sku = database.get_SKU(product_name, product_size)
+
+                    if sku:
+                        print(f"SKU Found {sku}")
+                        # product_SKU = product_list[SKU_lookup]
                         logging.debug(
-                            f"{product_SKU} {product_price} {product_multibuy}")
-                        with open(output_filename, "a") as out:
-                            out.write(
-                                f"{product_SKU} {product_price} {product_multibuy}\n")
-                    if SKU_lookup not in product_list:
+                            f"{sku} {product_price} {product_multibuy}")
+                        # save the item
+                        # database.save_price(
+                        #     sku, product_price, product_multibuy)
+                    else:
                         logging.debug(
                             f"{product_name} {product_size} was not found")
                         main_url = driver.current_url  # save the page url to reverse traversal
@@ -226,20 +232,22 @@ def scrape(driver, product_list, completed_categories):
                             # retrieve SKU and description here
                             product_secondary_information = driver.find_element_by_class_name(
                                 "secondaryInformation__section").get_attribute("innerText")
-                            logging.debug(
-                                f"Product's Secondary Information: {product_secondary_information}")
                             product_secondary_information = product_secondary_information.split(
                                 '\n')
+
+                            description = ""
                             for line in product_secondary_information:
                                 if "SKU" in line:
                                     product_SKU = line.replace("SKU ", "")
-                                    product_list[SKU_lookup] = product_SKU
-                                    logging.debug(
-                                        f"{product_SKU} {product_price} {product_multibuy}")
-                                    with open(output_filename, "a") as out:
-                                        # save to file as comma separated list for easier parsing later
-                                        out.write(
-                                            f"{product_SKU},{product_price},{str(product_multibuy).replace('m,','')}\n")
+                                elif "Description" in line:
+                                    description = line.replace(
+                                        "Description", "")
+
+                            database.new_product(
+                                product_SKU, product_name, description, department, current_category, product_size)
+                            # save price
+                            database.save_price(
+                                product_SKU, product_price, product_multibuy)
                         except ElementNotInteractableException:
                             logging.error(
                                 f"Element Not Interactable Exception occurred at: {driver.current_url} Element: {i}")
@@ -250,9 +258,9 @@ def scrape(driver, product_list, completed_categories):
                             logging.error(
                                 f"Element Click Intercepted Exception occurred at: {driver.current_url} Element: {i}")
                         finally:
-                            # save to file
-                            with open('SKU.pkl', 'wb') as pkl_file:
-                                pickle.dump(product_list, pkl_file)
+                            # # save to file
+                            # with open('SKU.pkl', 'wb') as pkl_file:
+                            #     pickle.dump(product_list, pkl_file)
                             # return back to listings
                             driver.get(main_url)
                             time.sleep(6)
@@ -266,7 +274,8 @@ def scrape(driver, product_list, completed_categories):
             button = driver.find_element_by_xpath(
                 '/html/body/div[1]/div/div[1]/div[1]/div/div[2]/div[1]/nav/button[2]')
             button.click()
-            scrape(driver, product_list, completed_categories)
+            scrape(driver, product_list, completed_categories,
+                   department, current_category)
             return
         except ElementNotInteractableException:
             # Exception raised when done scraping a category.
@@ -325,7 +334,7 @@ if __name__ == "__main__":
     todays_year = (todays_date + datetime.timedelta(days=4)).year
     print(f"week: {todays_week} year: {todays_year}")
 
-    print(f"Saving data to {output_filename}")
+    print(f"Saving data to database")
 
     # change to level to DEBUG / ERROR / WARNING
     logging.basicConfig(filename="test.log", level=logging.WARNING)
@@ -340,6 +349,9 @@ if __name__ == "__main__":
         headless = True
     else:
         headless = False
+
+    # connect to DB
+    database.connect()
 
     # load the ProductName -> SKU conversion list
     if os.path.isfile(SKU_filename):
@@ -372,10 +384,11 @@ if __name__ == "__main__":
             print_progress(tally_total, last_week_total)
             # Scrape the Department
             driver.get(department[1])
-            scrape(driver, name_to_SKU, completed_categories)
+            scrape(driver, name_to_SKU, completed_categories, department[0])
             # Record that we have successfully scraped the department
             with open("completed_categories.txt", "a") as f:
                 f.write(department[0] + "\n")
             logging.debug(f"Done scraping department: {department[0]}")
             driver.close()
+    database.close_db()
     print("Finished Scraping")
