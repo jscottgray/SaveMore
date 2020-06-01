@@ -12,19 +12,10 @@ import logging
 import pickle
 import database
 
-today = datetime.date.today()
 
-todays_date = datetime.date.today()
-todays_week = (todays_date + datetime.timedelta(days=4)).isocalendar()[1]
-todays_year = (todays_date + datetime.timedelta(days=4)).year
-output_filename = f"SaveOnFoods{todays_year}-{todays_week}.txt"
-url_filename = f"SaveOnFoodsURL{todays_year}-{todays_week}.txt"
-# output_filename = today.strftime("SaveOnFoods%b%d.txt")
-# line count for number of items scraped last week
-last_week_total = sum(1 for line in open("SaveOnFoods2019-44.txt"))
+# TODO: create query to find out how many products scraped last week
 tally_total = 0
-if os.path.isfile(output_filename):
-    tally_total = sum(1 for line in open(output_filename, "r+"))
+last_week_total = 11931
 
 # TODO: need to remove all references to saving the results in a txt file
 
@@ -54,38 +45,7 @@ def check_exists_by_xpath(driver, xpath):
     return True
 
 
-def lookup():
-    # load the department url text file
-    F = open("departments.txt", "r")
-    department_urls = []
-    for line in F:
-        department_urls.append(line.rstrip().split(" : "))
-    F.close()
-
-    if os.path.isfile('SKU.pkl'):
-        pkl_file = open('SKU.pkl', 'rb')
-        name_to_SKU = pickle.load(pkl_file)
-        pkl_file.close()
-    else:
-        logging.warning("Name to SKU File not found. Should be named SKU.pkl")
-        name_to_SKU = dict()
-
-    # scrape each department
-    for department in department_urls:
-        driver = init_driver()
-        print(f"Scraping department: {department[0]}")
-        logging.debug(f"Scraping department: {department[0]}")
-        driver.get(department[1])
-        scrape(driver, name_to_SKU)
-        driver.close()
-
-    # save the updated name to SKU dictionary to file
-    pkl_file = open('SKU.pkl', 'wb')
-    pickle.dump(name_to_SKU, pkl_file)
-    pkl_file.close()
-
-
-def scrape(driver, product_list, completed_categories, department, current_category=""):
+def scrape(driver, completed_categories, department, current_category=""):
     time.sleep(8)  # wait before checking if elements exist on the page
     # Given a page - is it a page with categories or a page with products?
     # A category page will have at least one button that says "View All"
@@ -120,7 +80,7 @@ def scrape(driver, product_list, completed_categories, department, current_categ
                     categories = driver.find_elements_by_xpath(
                         "//button[contains(.,'View All')]")
                     categories[i].click()
-                scrape(driver, product_list,
+                scrape(driver,
                        completed_categories, department, current_category)
                 driver.get(categories_url)
                 with open("completed_categories.txt", "a") as f:
@@ -130,8 +90,9 @@ def scrape(driver, product_list, completed_categories, department, current_categ
 
     # Option 2: "Next" button appears on page - indicates a page with listings
     else:
-        with open(url_filename, "a") as f:
-            f.write(driver.current_url + "\n")
+
+        # with open(url_filename, "a") as f:
+        #     f.write(driver.current_url + "\n")
         revert_url = driver.current_url
         try:
             products = driver.find_elements_by_class_name(
@@ -274,7 +235,7 @@ def scrape(driver, product_list, completed_categories, department, current_categ
             button = driver.find_element_by_xpath(
                 '/html/body/div[1]/div/div[1]/div[1]/div/div[2]/div[1]/nav/button[2]')
             button.click()
-            scrape(driver, product_list, completed_categories,
+            scrape(driver, completed_categories,
                    department, current_category)
             return
         except ElementNotInteractableException:
@@ -332,17 +293,9 @@ if __name__ == "__main__":
     todays_date = datetime.date.today()
     todays_week = (todays_date + datetime.timedelta(days=4)).isocalendar()[1]
     todays_year = (todays_date + datetime.timedelta(days=4)).year
-    print(f"week: {todays_week} year: {todays_year}")
-
-    print(f"Saving data to database")
 
     # change to level to DEBUG / ERROR / WARNING
     logging.basicConfig(filename="test.log", level=logging.WARNING)
-
-    SKU_filename = 'SKU.pkl'
-    URL_filename = 'departments.txt'
-    # update this so it includes the date
-    completed_categories_filename = "completed_categories.txt"
 
     # print(sys.argv)
     if "-h" in sys.argv or "--headless" in sys.argv:
@@ -353,38 +306,22 @@ if __name__ == "__main__":
     # connect to DB
     database.connect()
 
-    # load the ProductName -> SKU conversion list
-    if os.path.isfile(SKU_filename):
-        pkl_file = open(SKU_filename, 'rb')
-        name_to_SKU = pickle.load(pkl_file)
-        pkl_file.close()
-    else:
-        logging.warning(
-            f"Name to SKU File not found. Should be named {SKU_filename}")
-        name_to_SKU = dict()
-
     # load the department url text file
-    department_URLs = []
-    with open(URL_filename, "r") as departments_file:
-        for line in departments_file:
-            department_URLs.append(line.rstrip().split(" : "))
+    departments = database.get_departments()
 
     completed_categories = []
-    if os.path.isfile(completed_categories_filename):
-        with open(completed_categories_filename, "r") as f:
-            for line in f:
-                completed_categories.append(line.strip())
 
     # scrape each department
-    for department in department_URLs:
+    for department in departments:
         if department[0] not in completed_categories:
             driver = init_driver(headless)
             print(f"Scraping department: {department[0]}")
             logging.debug(f"Scraping department: {department[0]}")
             print_progress(tally_total, last_week_total)
             # Scrape the Department
-            driver.get(department[1])
-            scrape(driver, name_to_SKU, completed_categories, department[0])
+            link = f"https://shop.saveonfoods.com/store/AF1F1129#/category/{department[1]}/{department[2]}"
+            driver.get(link)
+            scrape(driver, completed_categories, department[0])
             # Record that we have successfully scraped the department
             with open("completed_categories.txt", "a") as f:
                 f.write(department[0] + "\n")

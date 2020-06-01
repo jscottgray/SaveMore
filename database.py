@@ -98,8 +98,7 @@ def new_product(SKU, Name, Description, Department, Category, Size):
 
 
 def get_SKU(Name, Size):
-    global conn, c
-    print(f"SELECT sku FROM products WHERE Name == {Name} AND Size == {Size}")
+    global c
     c.execute('''SELECT sku
                 FROM products
                 WHERE Name == ?
@@ -109,3 +108,10 @@ def get_SKU(Name, Size):
         return sku[0]
     else:
         return None
+
+
+def get_departments():
+    global conn, c
+    c.execute('''SELECT *
+                FROM departments''')
+    return c.fetchall()
