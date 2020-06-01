@@ -10,7 +10,7 @@ import sys
 import os
 import logging
 import pickle
-
+import database
 
 today = datetime.date.today()
 
@@ -93,15 +93,19 @@ def scrape(driver, product_list, completed_categories):
     if check_exists_by_xpath(driver, "//button[contains(.,'View All')]"):
         # View All button exists on page
         categories_url = driver.current_url
-        categories_size = len(driver.find_elements_by_xpath("//button[contains(.,'View All')]"))
+        categories_size = len(driver.find_elements_by_xpath(
+            "//button[contains(.,'View All')]"))
         # .subCategoryProductsList > li:nth-child(1) > div:nth-child(1) > h3:nth-child(1)
         category_name_list = []
-        category_names = driver.find_elements_by_class_name("subCategoryProducts__title")
+        category_names = driver.find_elements_by_class_name(
+            "subCategoryProducts__title")
         for i in range(len(category_names)):
-            category_name_list.append(category_names[i].get_attribute("innerText"))
+            category_name_list.append(
+                category_names[i].get_attribute("innerText"))
         for i in range(categories_size):
             # go through each category on the page
-            categories = driver.find_elements_by_xpath("//button[contains(.,'View All')]")
+            categories = driver.find_elements_by_xpath(
+                "//button[contains(.,'View All')]")
             current_category = category_name_list[i]
             if current_category not in completed_categories:
 
@@ -111,7 +115,8 @@ def scrape(driver, product_list, completed_categories):
                     logging.error(e.msg)
                     print(e.msg)
                     time.sleep(10)
-                    categories = driver.find_elements_by_xpath("//button[contains(.,'View All')]")
+                    categories = driver.find_elements_by_xpath(
+                        "//button[contains(.,'View All')]")
                     categories[i].click()
                 scrape(driver, product_list, completed_categories)
                 driver.get(categories_url)
@@ -126,21 +131,28 @@ def scrape(driver, product_list, completed_categories):
             f.write(driver.current_url + "\n")
         revert_url = driver.current_url
         try:
-            products = driver.find_elements_by_class_name("product__itemContent")
+            products = driver.find_elements_by_class_name(
+                "product__itemContent")
             number_of_products = len(products)
             if number_of_products != 0:
                 for i in range(number_of_products):
                     try:
                         product = products[i]
                     except IndexError:
-                        logging.error(f"Index Error occurred on element {i} at: {driver.currenturl}")
-                        print(f"Index Error occurred on element {i} at: {driver.currenturl}")
+                        logging.error(
+                            f"Index Error occurred on element {i} at: {driver.current_url}")
+                        print(
+                            f"Index Error occurred on element {i} at: {driver.current_url}")
                         time.sleep(10)
-                        products = driver.find_elements_by_class_name("product__itemContent")
+                        products = driver.find_elements_by_class_name(
+                            "product__itemContent")
                         product = products[i]
-                    product_name = product.find_element_by_tag_name("h3").get_attribute("innerText")
-                    product_size = product.find_element_by_class_name("productInfo__size").get_attribute("innerText")
-                    product_price = product.find_element_by_class_name("priceInfo").get_attribute("innerText")
+                    product_name = product.find_element_by_tag_name(
+                        "h3").get_attribute("innerText")
+                    product_size = product.find_element_by_class_name(
+                        "productInfo__size").get_attribute("innerText")
+                    product_price = product.find_element_by_class_name(
+                        "priceInfo").get_attribute("innerText")
                     product_multibuy = False
                     # could split price up, check the size
                     price_list = product_price.split()
@@ -149,15 +161,18 @@ def scrape(driver, product_list, completed_categories):
                         # price_list = product_price.split()
                         total_price = price_list[2].strip("$")
                         quantity = price_list[0]
-                        product_price = str(round(float(total_price) / int(quantity), 2))
+                        product_price = str(
+                            round(float(total_price) / int(quantity), 2))
                         product_multibuy = True
-                    elif "Buy" in product_price and "Get" in product_price:  # and "points" not in product_price:
+                    # and "points" not in product_price:
+                    elif "Buy" in product_price and "Get" in product_price:
                         if "points" not in product_price:
                             # buy 2 get 1 free
                             price = price_list[0]
                             price = price[1:]
                             price = float(price)
-                            product_price = int(price_list[2]) * price / (int(price_list[2]) + int(price_list[4]))
+                            product_price = int(
+                                price_list[2]) * price / (int(price_list[2]) + int(price_list[4]))
                         else:
                             # getting free points
                             product_multibuy = price_list[0]
@@ -168,12 +183,14 @@ def scrape(driver, product_list, completed_categories):
                         # confirm the weight is an average
                         if "avg" in product_size:
                             if (product_size.split()[1] == "g"):
-                                multiplier = 1000 / int(product_size.split()[0])
+                                multiplier = 1000 / \
+                                    int(product_size.split()[0])
                             else:
                                 # kg
                                 logging.warning(f"not g: {product_size}")
                                 multiplier = 1 / float(product_size.split()[0])
-                            product_price = float(product_price.split()[0].strip("$")) * multiplier
+                            product_price = float(product_price.split()[
+                                                  0].strip("$")) * multiplier
                             product_price = str(round(product_price, 2))
                             product_size = "/kg"
                         # need to multiply product_size by avg_price to get price/kg
@@ -181,7 +198,8 @@ def scrape(driver, product_list, completed_categories):
                     if isinstance(product_price, str):
                         product_price = product_price.strip("$")
 
-                    logging.debug(f"Name: {product_name} Size: {product_size} Price: {product_price}")
+                    logging.debug(
+                        f"Name: {product_name} Size: {product_size} Price: {product_price}")
                     # look up and see if name + size returns a known SKU
                     # if it doesn't click on the listing and get the SKU
                     SKU_lookup = str(product_name) + "::" + str(product_size)
@@ -193,33 +211,44 @@ def scrape(driver, product_list, completed_categories):
                     # check and see if we know the SKU based on Title+Size - if not we need to gather that info
                     if SKU_lookup in product_list:
                         product_SKU = product_list[SKU_lookup]
-                        logging.debug(f"{product_SKU} {product_price} {product_multibuy}")
+                        logging.debug(
+                            f"{product_SKU} {product_price} {product_multibuy}")
                         with open(output_filename, "a") as out:
-                            out.write(f"{product_SKU} {product_price} {product_multibuy}\n")
+                            out.write(
+                                f"{product_SKU} {product_price} {product_multibuy}\n")
                     if SKU_lookup not in product_list:
-                        logging.debug(f"{product_name} {product_size} was not found")
+                        logging.debug(
+                            f"{product_name} {product_size} was not found")
                         main_url = driver.current_url  # save the page url to reverse traversal
                         try:
                             products[i].find_element_by_tag_name("h3").click()
                             time.sleep(4)
                             # retrieve SKU and description here
-                            product_secondary_information = driver.find_element_by_class_name("secondaryInformation__section").get_attribute("innerText")
-                            logging.debug(f"Product's Secondary Information: {product_secondary_information}")
-                            product_secondary_information = product_secondary_information.split('\n')
+                            product_secondary_information = driver.find_element_by_class_name(
+                                "secondaryInformation__section").get_attribute("innerText")
+                            logging.debug(
+                                f"Product's Secondary Information: {product_secondary_information}")
+                            product_secondary_information = product_secondary_information.split(
+                                '\n')
                             for line in product_secondary_information:
                                 if "SKU" in line:
                                     product_SKU = line.replace("SKU ", "")
                                     product_list[SKU_lookup] = product_SKU
-                                    logging.debug(f"{product_SKU} {product_price} {product_multibuy}")
+                                    logging.debug(
+                                        f"{product_SKU} {product_price} {product_multibuy}")
                                     with open(output_filename, "a") as out:
                                         # save to file as comma separated list for easier parsing later
-                                        out.write(f"{product_SKU},{product_price},{str(product_multibuy).replace('m,','')}\n")
+                                        out.write(
+                                            f"{product_SKU},{product_price},{str(product_multibuy).replace('m,','')}\n")
                         except ElementNotInteractableException:
-                            logging.error(f"Element Not Interactable Exception occurred at: {driver.current_url} Element: {i}")
+                            logging.error(
+                                f"Element Not Interactable Exception occurred at: {driver.current_url} Element: {i}")
                         except NoSuchElementException:
-                            logging.error(f"No Such Element Exception occurred at: {driver.current_url} Element: {i}")
+                            logging.error(
+                                f"No Such Element Exception occurred at: {driver.current_url} Element: {i}")
                         except ElementClickInterceptedException:
-                            logging.error(f"Element Click Intercepted Exception occurred at: {driver.current_url} Element: {i}")
+                            logging.error(
+                                f"Element Click Intercepted Exception occurred at: {driver.current_url} Element: {i}")
                         finally:
                             # save to file
                             with open('SKU.pkl', 'wb') as pkl_file:
@@ -227,12 +256,15 @@ def scrape(driver, product_list, completed_categories):
                             # return back to listings
                             driver.get(main_url)
                             time.sleep(6)
-                            products = driver.find_elements_by_class_name("product__itemContent")
+                            products = driver.find_elements_by_class_name(
+                                "product__itemContent")
         except NoSuchElementException:
-            logging.error(f"No Such Element Exception occurred at: {driver.current_url}")
+            logging.error(
+                f"No Such Element Exception occurred at: {driver.current_url}")
         # hit the next button
         try:
-            button = driver.find_element_by_xpath('/html/body/div[1]/div/div[1]/div[1]/div/div[2]/div[1]/nav/button[2]')
+            button = driver.find_element_by_xpath(
+                '/html/body/div[1]/div/div[1]/div[1]/div/div[2]/div[1]/nav/button[2]')
             button.click()
             scrape(driver, product_list, completed_categories)
             return
@@ -240,7 +272,8 @@ def scrape(driver, product_list, completed_categories):
             # Exception raised when done scraping a category.
             # The element exists but obviously doesn't appear on the last page
             # logging level is debug not error as this is an expected issue at the end of each category
-            logging.debug(f"Element Not Interactable Exception occurred at: {driver.current_url}")
+            logging.debug(
+                f"Element Not Interactable Exception occurred at: {driver.current_url}")
             return
         except NoSuchElementException:
             # for categories which do not have more than 1 page - hence no navigation
@@ -314,7 +347,8 @@ if __name__ == "__main__":
         name_to_SKU = pickle.load(pkl_file)
         pkl_file.close()
     else:
-        logging.warning(f"Name to SKU File not found. Should be named {SKU_filename}")
+        logging.warning(
+            f"Name to SKU File not found. Should be named {SKU_filename}")
         name_to_SKU = dict()
 
     # load the department url text file
