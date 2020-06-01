@@ -286,13 +286,12 @@ def print_progress(progress, total):
     print(f"{string} {int(progress * 100 / total)}% {progress}/{total}", end="\r")
 
 
+def sort_by(a):
+    return a[3]
+
+
 if __name__ == "__main__":
     print(f"tally total: {tally_total} last week total: {last_week_total}")
-
-    # retrieve todays date and the current week (starting on Thursdays)
-    todays_date = datetime.date.today()
-    todays_week = (todays_date + datetime.timedelta(days=4)).isocalendar()[1]
-    todays_year = (todays_date + datetime.timedelta(days=4)).year
 
     # change to level to DEBUG / ERROR / WARNING
     logging.basicConfig(filename="test.log", level=logging.WARNING)
@@ -312,7 +311,7 @@ if __name__ == "__main__":
     completed_categories = []
 
     # scrape each department
-    for department in departments:
+    for department in sorted(departments, key=sort_by, reverse=True):
         if department[0] not in completed_categories:
             driver = init_driver(headless)
             print(f"Scraping department: {department[0]}")
