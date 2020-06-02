@@ -85,7 +85,6 @@ def scrape(driver, completed_categories, department, current_category=""):
                 driver.get(categories_url)
                 with open("completed_categories.txt", "a") as f:
                     f.write(current_category + "\n")
-                    # f.write(f"Current URL:{driver.current_url}")
                 time.sleep(6)
 
     # Option 2: "Next" button appears on page - indicates a page with listings
@@ -219,9 +218,6 @@ def scrape(driver, completed_categories, department, current_category=""):
                             logging.error(
                                 f"Element Click Intercepted Exception occurred at: {driver.current_url} Element: {i}")
                         finally:
-                            # # save to file
-                            # with open('SKU.pkl', 'wb') as pkl_file:
-                            #     pickle.dump(product_list, pkl_file)
                             # return back to listings
                             driver.get(main_url)
                             time.sleep(6)
@@ -309,6 +305,10 @@ if __name__ == "__main__":
     departments = database.get_departments()
 
     completed_categories = []
+    if os.path.isfile("completed_categories.txt"):
+        with open("completed_categories.txt", "r") as f:
+            for line in f:
+                completed_categories.append(line.strip())
 
     # scrape each department
     for department in sorted(departments, key=sort_by, reverse=True):

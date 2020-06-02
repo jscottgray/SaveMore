@@ -75,7 +75,7 @@ def connect():
             PRIMARY KEY (SKU, Date),
             FOREIGN KEY (SKU)
                 REFERENCES products
-                ON DELETE CASCADE
+                ON DELETE NO ACTION
             ) WITHOUT ROWID''')
 
         conn.commit()
@@ -96,8 +96,18 @@ def save_price(SKU, price, multibuy=False, sales_desc=""):
 def new_product(SKU, Name, Description, Department, Category, Size):
     global conn, c
     print(f"tuple {(SKU, Name, Description, Department, Category, Size)}")
-    c.execute("INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)",
-              (SKU, Name, Description, Department, Category, Size))
+    try:
+        c.execute("INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)",
+                  (SKU, Name, Description, Department, Category, Size))
+    except sqlite3.IntegrityError:
+        # product already exists, update existing record
+        c.execute('''UPDATE products
+                    SET Name = ?,
+                        Description = ?,
+                        Department = ?,
+                        Category = ?,
+                        Size = ?
+                    WHERE Sku == ?''', (Name, Description, Department, Category, Size, SKU))
     conn.commit()
 
 
