@@ -6,6 +6,8 @@ Uses Depth First Traversal to get all items listed. If an item isn't previously 
 
 **First time initialization** (requires Homebrew, available on MacOS and Linux):
 ```bash
+git clone https://github.com/jscottgray/SaveMore.git
+cd SaveMore
 brew install geckodriver
 pip install -r requirements.txt
 ```
