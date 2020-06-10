@@ -1,15 +1,21 @@
 # SaveMore
 
-This is a selenium-based web scraper designed to scrape the online store of Save-On-Foods. Ever wonder what a good price is for a product you don't frequently purchase? That's the driving force behind this project.
+This is a Selenium-based web scraper designed to scrape the online store of Save-On-Foods. Ever wonder what a good price is for a product you don't frequently purchase? That's the driving force behind this project.
 
-Uses Depth First Traversal to get all items listed. If an item isn't previously known (project stores a pkl file of product name dictionary) it scrapes that individual page as well which can add many hours to total traversal time. When SKUs are known the total scraping process can take 3-4 hours, due to very generous/friendly hard-coded wait times.
+Uses Depth First Traversal to get all items listed. If an item isn't previously known it scrapes that individual page as well which can add many hours to total traversal time. When SKUs are known the total scraping process can take 3-4 hours, due to very generous/friendly hard-coded wait times.
 
-Currently under development.
-
+**First time initialization** (requires Homebrew, available on MacOS and Linux):
 ```bash
+brew install geckodriver
 pip install -r requirements.txt
+```
+
+**Running the scraper** (Weekly frequency recommended - prices aren't updated more frequently than that):
+```bash
+rm completed_categories.txt
 python3 SaveOn.py
 ```
+The scraper records progress of it's scraping progress so that if you stop the program mid-scrape it will not unnecessarily scrape already scrapped departments. This progress is saved in the completed_categories file.
 
 ## Graph showing the Store's Tree Structure
 ![Graph](./Graph.svg)
